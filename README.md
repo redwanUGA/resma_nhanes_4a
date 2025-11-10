@@ -20,6 +20,13 @@ chmod +x run_workflow.sh
 ./run_workflow.sh
 ```
 
+### Windows (Git Bash)
+```bash
+chmod +x run_workflow_windows.sh
+./run_workflow_windows.sh
+```
+This script auto-detects `python3`/`python`/`py -3` on Windows and logs to `run_log_YYYYMMDD_HHMMSS.txt`.
+
 ### Outputs
 - `output_data/nhanes_merged_multimarker.csv` – unified dataset
 - `output_data/regression_results_by_cycle_<MARKER>.csv` – β ± 95% CI per cycle
