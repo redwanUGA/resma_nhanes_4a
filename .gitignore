@@ -1,0 +1,26 @@
+# Generated data and outputs
+nhanes_data/
+output_data/
+output_figures/
+
+# Logs
+run_log_*.txt
+
+# Python cache/artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
