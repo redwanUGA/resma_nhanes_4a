@@ -1,5 +1,5 @@
 # 2_merge_preprocess_multimarker.py
-import os, numpy as np, pandas as pd, pyreadstat
+import os, sys, numpy as np, pandas as pd, pyreadstat
 
 os.makedirs("output_data", exist_ok=True)
 DATA_DIR = "nhanes_data"
@@ -28,6 +28,23 @@ CYCLES = {
 }
 
 race_map = {1:"Mexican American",2:"Other Hispanic",3:"Non-Hispanic White",4:"Non-Hispanic Black",5:"Other/Multi-Racial"}
+
+def required_files_missing(cycle, files):
+    must_have = ["DEMO","OHX","CRP","CBC","SMQ","ALQ","BMX","DIQ"]
+    missing = []
+    for key in must_have:
+        fname = files[key]
+        path = os.path.join(DATA_DIR, fname)
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            missing.append(fname)
+    return missing
+
+def load_xpt(path, label):
+    try:
+        df, _ = pyreadstat.read_xport(path)
+        return df
+    except Exception as err:
+        raise RuntimeError(f"Failed to read {label} ({path}): {err}") from err
 
 def count_amalgam(df_ohx):
     cols = [c for c in df_ohx.columns if c.startswith("OHX") and c.endswith(("TC","FS","FT"))]
@@ -66,22 +83,30 @@ def detect_mercury_col(df):
 frames = []
 
 for cycle, files in CYCLES.items():
+    missing = required_files_missing(cycle, files)
+    if missing:
+        print(f"⚠️  Skipping {cycle}: missing files {', '.join(missing)}")
+        continue
     try:
-        demo,_ = pyreadstat.read_xport(os.path.join(DATA_DIR, files["DEMO"]))
-        ohx,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["OHX"]))
-        crp,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["CRP"]))
-        cbc,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["CBC"]))
-        smq,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["SMQ"]))
-        alq,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["ALQ"]))
-        bmx,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["BMX"]))
-        diq,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["DIQ"]))
+        demo = load_xpt(os.path.join(DATA_DIR, files["DEMO"]), "DEMO")
+        ohx  = load_xpt(os.path.join(DATA_DIR, files["OHX"]), "OHX")
+        crp  = load_xpt(os.path.join(DATA_DIR, files["CRP"]), "CRP")
+        cbc  = load_xpt(os.path.join(DATA_DIR, files["CBC"]), "CBC")
+        smq  = load_xpt(os.path.join(DATA_DIR, files["SMQ"]), "SMQ")
+        alq  = load_xpt(os.path.join(DATA_DIR, files["ALQ"]), "ALQ")
+        bmx  = load_xpt(os.path.join(DATA_DIR, files["BMX"]), "BMX")
+        diq  = load_xpt(os.path.join(DATA_DIR, files["DIQ"]), "DIQ")
         try:
-            hgm,_  = pyreadstat.read_xport(os.path.join(DATA_DIR, files["HGM"]))
-        except Exception:
+            hgm  = load_xpt(os.path.join(DATA_DIR, files["HGM"]), "HGM")
+        except Exception as err:
+            print(f"⚠️  {cycle}: unable to read mercury file ({err}); continuing without it.")
             hgm = pd.DataFrame()
 
         ohx2 = count_amalgam(ohx)
         crp_col = detect_crp_col(crp)
+        if not crp_col:
+            print(f"⚠️  Skipping {cycle}: CRP column not found in {files['CRP']}")
+            continue
         df = demo.merge(ohx2, on="SEQN").merge(crp[["SEQN",crp_col]], on="SEQN", how="left")
         df["CRP"] = df[crp_col]
         df = df.merge(cbc, on="SEQN", how="left")
@@ -114,6 +139,13 @@ for cycle, files in CYCLES.items():
         print(f"✅ Merged {cycle}, n={len(df)}")
     except Exception as e:
         print(f"❌ Skipped {cycle}: {e}")
+
+if not frames:
+    print("⚠️  No NHANES cycles were processed. Ensure nhanes_data/ contains the downloaded .xpt files from CDC.")
+    empty_cols = ["SEQN","Cycle","amalgam_surfaces","CRP","NLR","MLR","PLR","SII",
+                  "Gender","Race","Age","PIR","WTMEC2YR"]
+    pd.DataFrame(columns=empty_cols).to_csv("output_data/nhanes_merged_multimarker.csv", index=False)
+    sys.exit(0)
 
 full = pd.concat(frames, ignore_index=True)
 full.to_csv("output_data/nhanes_merged_multimarker.csv", index=False)

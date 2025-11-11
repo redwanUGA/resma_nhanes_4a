@@ -1,9 +1,18 @@
 # 4_visualize_multimarker.py
-import os, pandas as pd, numpy as np, seaborn as sns, matplotlib.pyplot as plt
+import os, sys
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(os.getcwd(), ".matplotlib_config"))
+os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
+os.environ.setdefault("XDG_CACHE_HOME", os.path.join(os.getcwd(), ".xdg_cache"))
+os.makedirs(os.environ["XDG_CACHE_HOME"], exist_ok=True)
+
+import pandas as pd, numpy as np, seaborn as sns, matplotlib.pyplot as plt
 sns.set(style="whitegrid", font_scale=1.1)
 os.makedirs("output_figures", exist_ok=True)
 
 merged = pd.read_csv("output_data/nhanes_merged_multimarker.csv")
+if merged.empty:
+    print("⚠️  nhanes_merged_multimarker.csv has no rows; skipping figure generation.")
+    sys.exit(0)
 MARKERS = ["CRP","NLR","MLR","PLR","SII"]
 
 # Figure A: CRP distribution by amalgam burden

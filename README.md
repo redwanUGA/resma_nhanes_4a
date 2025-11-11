@@ -34,3 +34,24 @@ This script auto-detects `python3`/`python`/`py -3` on Windows and logs to `run_
 - `output_figures/` – Forest, Trend, Heatmap per marker + CRP/behavior figs
 
 > Note: Regressions use **weighted least squares (WTMEC2YR)** as a practical approximation to complex survey design.
+
+## Required NHANES `.xpt` files
+Place the original SAS transport files you download from the [CDC NHANES portal](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=1999) into `nhanes_data/` with the exact names listed below (one row per 2-year cycle):
+
+| Cycle | Demographics | Oral Health | CRP / hsCRP | CBC | Smoking | Alcohol | Body Measures | Diabetes | Mercury |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1999-2000 | DEMO.xpt | OHXDENT.xpt | LAB11.xpt | LAB25.xpt | SMQ.xpt | ALQ.xpt | BMX.xpt | DIQ.xpt | LAB06HM.xpt |
+| 2001-2002 | DEMO_B.xpt | OHXDEN_B.xpt | L11_B.xpt | LAB25_B.xpt | SMQ_B.xpt | ALQ_B.xpt | BMX_B.xpt | DIQ_B.xpt | L06_2_B.xpt |
+| 2003-2004 | DEMO_C.xpt | OHXDEN_C.xpt | L11_C.xpt | LAB25_C.xpt | SMQ_C.xpt | ALQ_C.xpt | BMX_C.xpt | DIQ_C.xpt | L06BMT_C.xpt |
+| 2005-2006 | DEMO_D.xpt | OHXDEN_D.xpt | CRP_D.xpt | CBC_D.xpt | SMQ_D.xpt | ALQ_D.xpt | BMX_D.xpt | DIQ_D.xpt | PBCD_D.xpt |
+| 2007-2008 | DEMO_E.xpt | OHXDEN_E.xpt | CRP_E.xpt | CBC_E.xpt | SMQ_E.xpt | ALQ_E.xpt | BMX_E.xpt | DIQ_E.xpt | PBCD_E.xpt |
+| 2009-2010 | DEMO_F.xpt | OHXDEN_F.xpt | CRP_F.xpt | CBC_F.xpt | SMQ_F.xpt | ALQ_F.xpt | BMX_F.xpt | DIQ_F.xpt | PBCD_F.xpt |
+| 2011-2012 | DEMO_G.xpt | OHXDEN_G.xpt | CRP_G.xpt | CBC_G.xpt | SMQ_G.xpt | ALQ_G.xpt | BMX_G.xpt | DIQ_G.xpt | PBCD_G.xpt |
+| 2013-2014 | DEMO_H.xpt | OHXDEN_H.xpt | CRP_H.xpt | CBC_H.xpt | SMQ_H.xpt | ALQ_H.xpt | BMX_H.xpt | DIQ_H.xpt | PBCD_H.xpt |
+| 2015-2016 | DEMO_I.xpt | OHXDEN_I.xpt | CRP_I.xpt | CBC_I.xpt | SMQ_I.xpt | ALQ_I.xpt | BMX_I.xpt | DIQ_I.xpt | PBCD_I.xpt |
+| 2017-2018 | DEMO_J.xpt | OHXDEN_J.xpt | HSCRP_J.xpt | CBC_J.xpt | SMQ_J.xpt | ALQ_J.xpt | BMX_J.xpt | DIQ_J.xpt | PBCD_J.xpt |
+
+### When downloads are unavailable
+- `1_download_data.py` keeps retry/open internet logic, but in restricted environments Python's `requests` may fail to resolve `wwwn.cdc.gov` even though simple `curl` calls succeed. In such cases, manually download via a browser and move the files into `nhanes_data/`.
+- `2_merge_preprocess_multimarker.py` now requires the real `.xpt` files. If nothing is present it will emit a warning, write an empty `output_data/nhanes_merged_multimarker.csv`, and exit cleanly—no synthetic data are generated.
+- `3_regression_multimarker.py` and `4_visualize_multimarker.py` detect empty inputs and skip computation/figure generation while still completing without errors so that automated workflows can run end-to-end even when the raw data are missing.

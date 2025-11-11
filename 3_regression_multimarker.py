@@ -25,6 +25,8 @@ def prep_df(d):
     sex = pd.get_dummies(d["Gender"], prefix="Sex", drop_first=True)
     race = pd.get_dummies(d["Race"], prefix="Race", drop_first=True)
     X = pd.concat([X, sex, race], axis=1)
+    # Ensure all predictors are numeric (booleans become 0/1) before fitting statsmodels
+    X = X.apply(pd.to_numeric, errors="coerce").astype(float)
     X = sm.add_constant(X, has_constant="add")
     w = d["WTMEC2YR"]
     return X, w
@@ -55,7 +57,12 @@ for marker in MARKERS:
         y = log_transform(sub[marker]) if marker in sub.columns else pd.Series(np.nan, index=sub.index)
         beta, lo, hi = wls_fit(y, X, w)
         rows.append({"Marker": marker, "Cycle": cycle, "Beta": beta, "CI_Low": lo, "CI_High": hi})
-    out = pd.DataFrame(rows).sort_values("Cycle")
+    if rows:
+        out = pd.DataFrame(rows)
+        if "Cycle" in out.columns:
+            out = out.sort_values("Cycle")
+    else:
+        out = pd.DataFrame(columns=["Marker","Cycle","Beta","CI_Low","CI_High"])
     out.to_csv(f"output_data/regression_results_by_cycle_{marker}.csv", index=False)
     print(f"✅ Saved output_data/regression_results_by_cycle_{marker}.csv")
 
@@ -67,5 +74,6 @@ for marker in MARKERS:
         y = log_transform(grp[marker]) if marker in grp.columns else pd.Series(np.nan, index=grp.index)
         beta, lo, hi = wls_fit(y, X, w)
         subrows.append({"Marker": marker, "Sex": sex, "Race": race, "Beta": beta})
-    pd.DataFrame(subrows).to_csv(f"output_data/stratified_results_{marker}.csv", index=False)
+    strat_df = pd.DataFrame(subrows) if subrows else pd.DataFrame(columns=["Marker","Sex","Race","Beta"])
+    strat_df.to_csv(f"output_data/stratified_results_{marker}.csv", index=False)
     print(f"✅ Saved output_data/stratified_results_{marker}.csv")
