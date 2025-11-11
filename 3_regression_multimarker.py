@@ -373,6 +373,24 @@ def cycle_specific_crp(df: pd.DataFrame) -> None:
                 "Weighted_N": w,
             }
         )
+    if not rows:
+        print("⚠️  Skipping cycle-specific CRP (insufficient cycle data).")
+        cols = [
+            "Cycle",
+            "CycleMidpoint",
+            "Beta_amalgam",
+            "CI_low_amalgam",
+            "CI_high_amalgam",
+            "Beta_mercury",
+            "CI_low_mercury",
+            "CI_high_mercury",
+            "N",
+            "Weighted_N",
+        ]
+        pd.DataFrame(columns=cols).to_csv(
+            os.path.join(OUTPUT_DIR, "regression_cycle_crp.csv"), index=False
+        )
+        return
     cycle_df = pd.DataFrame(rows).sort_values("Cycle")
     cycle_df.to_csv(os.path.join(OUTPUT_DIR, "regression_cycle_crp.csv"), index=False)
 
@@ -488,7 +506,22 @@ def interaction_analysis(df: pd.DataFrame) -> None:
                 "Weighted_N": w,
             }
         )
-    pd.DataFrame(rows).to_csv(
+    columns = [
+        "Interaction",
+        "Base_mercury_beta",
+        "Interaction_beta",
+        "Interaction_p",
+        "Beta_in_exposed_group",
+        "N",
+        "Weighted_N",
+    ]
+    if not rows:
+        print("⚠️  Skipping interaction analysis (insufficient data).")
+        pd.DataFrame(columns=columns).to_csv(
+            os.path.join(OUTPUT_DIR, "behavior_interaction_results.csv"), index=False
+        )
+        return
+    pd.DataFrame(rows, columns=columns).to_csv(
         os.path.join(OUTPUT_DIR, "behavior_interaction_results.csv"), index=False
     )
 

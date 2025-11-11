@@ -279,6 +279,23 @@ def plot_temporal_trend():
     ax.set_xlabel("Survey cycle midpoint year")
     ax.set_ylabel("β coefficient")
     ax.set_title("Figure 5. Temporal trends of β-coefficients (CRP models)")
+    valid_ticks = trend["CycleMidpoint"].notna()
+    if valid_ticks.any():
+        tick_positions = trend.loc[valid_ticks, "CycleMidpoint"].tolist()
+        if "Cycle" in trend.columns and trend["Cycle"].notna().any():
+            fallback_labels = pd.Series(tick_positions).round().astype(int).astype(str)
+            tick_labels = (
+                trend.loc[valid_ticks, "Cycle"]
+                .reset_index(drop=True)
+                .fillna(fallback_labels)
+                .astype(str)
+                .tolist()
+            )
+            ax.set_xticks(tick_positions)
+            ax.set_xticklabels(tick_labels, rotation=30, ha="right")
+            ax.set_xlabel("Cycle")
+        else:
+            ax.set_xticks(tick_positions)
     ax.legend()
     fig.tight_layout()
     fig.savefig(os.path.join(OUTPUT_FIG_DIR, "Fig5_Trend_MultiMarker.png"), dpi=300)
@@ -386,7 +403,12 @@ def plot_behavior_figures(df):
     smoke = weighted_percent(df.dropna(subset=["amalgam_group"]), "amalgam_group", "current_smoker_flag")
     drink = weighted_percent(df.dropna(subset=["amalgam_group"]), "amalgam_group", "alcohol_flag")
     interact_path = os.path.join(DATA_DIR, "behavior_interaction_results.csv")
-    interaction = pd.read_csv(interact_path) if os.path.exists(interact_path) else pd.DataFrame()
+    interaction = pd.DataFrame()
+    if os.path.exists(interact_path):
+        try:
+            interaction = pd.read_csv(interact_path)
+        except pd.errors.EmptyDataError:
+            interaction = pd.DataFrame()
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     if not smoke.empty:
