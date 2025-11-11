@@ -28,10 +28,16 @@ chmod +x run_workflow_windows.sh
 This script auto-detects `python3`/`python`/`py -3` on Windows and logs to `run_log_YYYYMMDD_HHMMSS.txt`.
 
 ### Outputs
-- `output_data/nhanes_merged_multimarker.csv` – unified dataset
-- `output_data/regression_results_by_cycle_<MARKER>.csv` – β ± 95% CI per cycle
-- `output_data/stratified_results_<MARKER>.csv` – β by Sex × Race
-- `output_figures/` – Forest, Trend, Heatmap per marker + CRP/behavior figs
+- `output_data/nhanes_merged_multimarker.csv` – unified analytic dataset
+- `output_data/table1_demographics_by_amalgam.csv` – weighted characteristics for Table 1
+- `output_data/sample_overview_metrics.csv` – high-level Ns/weighted percentages
+- `output_data/table2_regression_amalgam_mercury_adjusted.csv` – Model 1 vs Model 2 contrasts for all inflammatory markers (Table 2)
+- `output_data/marker_weighted_geomeans.csv` – geometric means across amalgam and mercury strata
+- `output_data/mercury_on_amalgam_regression.csv` – β (log-mercury ~ amalgam surfaces) supporting Fig. 2 / Section 4.3
+- `output_data/regression_cycle_crp.csv` & `output_data/stratified_crp_heatmap.csv` – inputs for Figures 4–5
+- `output_data/mediation_results_crp.csv` & `output_data/behavior_interaction_results.csv` – mediation + interaction diagnostics for Sections 4.8–4.9
+- Legacy exports: `regression_results_by_cycle_<MARKER>.csv`, `stratified_results_<MARKER>.csv`
+- `output_figures/` now houses the publication-ready panels: `Fig1_BloodMercury_Distribution.png` through `Fig7_Smoking_Drinking.png` aligned with Sections 4.1–4.10
 
 > Note: Regressions use **weighted least squares (WTMEC2YR)** as a practical approximation to complex survey design.
 

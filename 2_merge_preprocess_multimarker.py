@@ -29,6 +29,47 @@ CYCLES = {
 
 race_map = {1:"Mexican American",2:"Other Hispanic",3:"Non-Hispanic White",4:"Non-Hispanic Black",5:"Other/Multi-Racial"}
 
+def compute_cycle_midpoint(label):
+    """Return the midpoint year for plot-ready time series (e.g., '1999-2000' -> 1999.5)."""
+    try:
+        start, end = label.split("-")
+        start, end = int(start), int(end)
+        return start + (end - start) / 2.0
+    except Exception:
+        return np.nan
+
+def weighted_quantile(values, quantiles, sample_weight):
+    """Compute weighted quantiles for positive weights."""
+    values = np.asarray(values)
+    quantiles = np.asarray(quantiles)
+    sample_weight = np.asarray(sample_weight)
+    mask = (~np.isnan(values)) & (~np.isnan(sample_weight))
+    values, sample_weight = values[mask], sample_weight[mask]
+    if values.size == 0:
+        return np.array([np.nan] * len(quantiles))
+    sorter = np.argsort(values)
+    values, sample_weight = values[sorter], sample_weight[sorter]
+    cumulative = np.cumsum(sample_weight)
+    if cumulative[-1] == 0:
+        return np.array([np.nan] * len(quantiles))
+    cumulative /= cumulative[-1]
+    return np.interp(quantiles, cumulative, values)
+
+def assign_mercury_quartiles(df):
+    """Add weighted blood-mercury quartile labels for downstream figures/tables."""
+    if "LBXTHG" not in df.columns:
+        df["mercury_quartile"] = np.nan
+        return df
+    mask = df["LBXTHG"].notna() & (df["LBXTHG"] > 0) & df["WTMEC2YR"].notna()
+    if mask.sum() < 50:
+        df["mercury_quartile"] = np.nan
+        return df
+    qs = weighted_quantile(df.loc[mask, "LBXTHG"], [0.25, 0.5, 0.75], df.loc[mask, "WTMEC2YR"])
+    bins = [-np.inf, qs[0], qs[1], qs[2], np.inf]
+    labels = ["Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"]
+    df["mercury_quartile"] = pd.cut(df["LBXTHG"], bins=bins, labels=labels)
+    return df
+
 def required_files_missing(cycle, files):
     must_have = ["DEMO","OHX","CRP","CBC","SMQ","ALQ","BMX","DIQ"]
     missing = []
@@ -148,5 +189,12 @@ if not frames:
     sys.exit(0)
 
 full = pd.concat(frames, ignore_index=True)
+if "LBXTHG" not in full.columns:
+    full["LBXTHG"] = np.nan
+full["log_mercury"] = np.where(full["LBXTHG"] > 0, np.log(full["LBXTHG"]), np.nan)
+full["any_amalgam"] = (full["amalgam_surfaces"] > 0).astype(float)
+full["amalgam_high_burden"] = (full["amalgam_surfaces"] >= 6).astype(float)
+full["CycleMidpoint"] = full["Cycle"].apply(compute_cycle_midpoint)
+full = assign_mercury_quartiles(full)
 full.to_csv("output_data/nhanes_merged_multimarker.csv", index=False)
 print("✅ Saved output_data/nhanes_merged_multimarker.csv")
