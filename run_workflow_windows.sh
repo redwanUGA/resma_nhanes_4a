@@ -15,6 +15,24 @@ else
   exit 1
 fi
 
+# Create/refresh a local virtual environment and use it for all steps
+VENV_DIR=".venv"
+WIN_PY="$VENV_DIR/Scripts/python.exe"
+NIX_PY="$VENV_DIR/bin/python"
+if [ -x "$WIN_PY" ]; then
+  VENV_PY="$WIN_PY"
+elif [ -x "$NIX_PY" ]; then
+  VENV_PY="$NIX_PY"
+else
+  echo "Creating virtual environment at $VENV_DIR" | tee -a "$LOG"
+  eval "$PY_CMD -m venv $VENV_DIR" >> "$LOG" 2>&1
+  if [ -x "$WIN_PY" ]; then VENV_PY="$WIN_PY"; else VENV_PY="$NIX_PY"; fi
+fi
+echo "Ensuring required packages are installed…" | tee -a "$LOG"
+eval "$VENV_PY -m pip install --disable-pip-version-check -U pip setuptools wheel" >> "$LOG" 2>&1
+eval "$VENV_PY -m pip install --disable-pip-version-check -r requirements.txt" >> "$LOG" 2>&1
+PY_CMD="$VENV_PY"
+
 LOG="run_log_$(date +'%Y%m%d_%H%M%S').txt"
 echo "NHANES Multimarker Workflow (Windows Bash)" | tee -a "$LOG"
 

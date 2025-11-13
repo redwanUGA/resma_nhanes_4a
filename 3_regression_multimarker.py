@@ -341,7 +341,22 @@ def build_model_comparisons(df: pd.DataFrame) -> pd.DataFrame:
                     "Adj_R2": res.rsquared_adj,
                 }
             )
-    comparison = pd.DataFrame(rows)
+    columns = [
+        "Marker",
+        "Model",
+        "Beta_amalgam",
+        "CI_low_amalgam",
+        "CI_high_amalgam",
+        "p_amalgam",
+        "Beta_mercury",
+        "CI_low_mercury",
+        "CI_high_mercury",
+        "p_mercury",
+        "N",
+        "Weighted_N",
+        "Adj_R2",
+    ]
+    comparison = pd.DataFrame(rows, columns=columns)
     comparison.to_csv(
         os.path.join(OUTPUT_DIR, "table2_regression_amalgam_mercury_adjusted.csv"), index=False
     )

@@ -284,7 +284,11 @@ def plot_heatmaps():
     if not os.path.exists(path):
         print("[WARN]  Skipping Figure 4 (stratified heatmap data missing).")
         return
-    heat = pd.read_csv(path)
+    try:
+        heat = pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        print("[WARN]  Skipping Figure 4 (stratified heatmap file empty).")
+        return
     if heat.empty:
         print("[WARN]  Skipping Figure 4 (empty stratified results).")
         return
@@ -485,20 +489,31 @@ def plot_mediation_diagram():
     if not os.path.exists(med_path):
         print("[WARN]  Skipping Figure 6 (mediation results missing).")
         return
-    med = pd.read_csv(med_path)
+    try:
+        med = pd.read_csv(med_path)
+    except pd.errors.EmptyDataError:
+        print("[WARN]  Skipping Figure 6 (mediation results empty).")
+        return
     if med.empty:
         print("[WARN]  Skipping Figure 6 (empty mediation results).")
         return
     prop = med["Proportion_mediated"].iloc[0] if "Proportion_mediated" in med else np.nan
     beta_amalgam = beta_mercury = beta_direct = np.nan
     if os.path.exists(table_path):
-        table = pd.read_csv(table_path)
-        crp_row = table[(table["Marker"] == "CRP") & (table["Model"].str.contains("Model 2"))]
-        if not crp_row.empty:
-            beta_direct = crp_row["Beta_amalgam"].iloc[0]
-            beta_mercury = crp_row["Beta_mercury"].iloc[0]
+        try:
+            table = pd.read_csv(table_path)
+        except pd.errors.EmptyDataError:
+            table = pd.DataFrame()
+        if not table.empty:
+            crp_row = table[(table["Marker"] == "CRP") & (table["Model"].str.contains("Model 2"))]
+            if not crp_row.empty:
+                beta_direct = crp_row["Beta_amalgam"].iloc[0]
+                beta_mercury = crp_row["Beta_mercury"].iloc[0]
     if os.path.exists(mercury_reg_path):
-        reg = pd.read_csv(mercury_reg_path)
+        try:
+            reg = pd.read_csv(mercury_reg_path)
+        except pd.errors.EmptyDataError:
+            reg = pd.DataFrame()
         if not reg.empty and "Beta" in reg.columns:
             beta_amalgam = reg["Beta"].iloc[0]
     fig, ax = plt.subplots(figsize=(8, 5))

@@ -17,6 +17,21 @@ if errorlevel 1 (
 
 call :log "Using Python command: %PY_CMD%"
 
+rem Ensure a local virtual environment with required packages
+set "VENV_DIR=.venv"
+set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
+set "VENV_PIP=%VENV_DIR%\Scripts\pip.exe"
+
+call :setup_venv
+if errorlevel 1 (
+  call :log "ERROR: Failed to set up Python virtual environment."
+  exit /b 1
+)
+
+rem From this point on, always run inside the venv
+set "PY_CMD=%VENV_PY%"
+call :log "Activated venv Python: %PY_CMD%"
+
 set "NEED_DOWNLOAD=0"
 if not exist "nhanes_data" (
   set "NEED_DOWNLOAD=1"
@@ -64,6 +79,28 @@ if errorlevel 1 (
   exit /b 1
 )
 exit /b 0
+
+
+:setup_venv
+if exist "%VENV_PY%" (
+  rem Refresh dependencies to avoid missing modules
+  call :log "Ensuring Python deps (pip install -r requirements.txt)…"
+  "%VENV_PY%" -m pip install --disable-pip-version-check -q -r requirements.txt >> "%LOG%" 2>&1
+  goto :eof
+)
+
+call :log "Creating virtual environment at %VENV_DIR%…"
+call %PY_CMD% -m venv "%VENV_DIR%" >> "%LOG%" 2>&1
+if errorlevel 1 exit /b 1
+
+call :log "Bootstrapping pip/setuptools…"
+"%VENV_PY%" -m pip install --upgrade --disable-pip-version-check pip setuptools wheel >> "%LOG%" 2>&1
+if errorlevel 1 exit /b 1
+
+call :log "Installing required packages…"
+"%VENV_PY%" -m pip install --disable-pip-version-check -r requirements.txt >> "%LOG%" 2>&1
+if errorlevel 1 exit /b 1
+goto :eof
 
 
 :log
