@@ -403,14 +403,18 @@ def stratified_crp_heatmaps(df: pd.DataFrame) -> None:
         if not result:
             continue
         res, n, w = result
-        beta_a, _, _, _ = extract_param(res, "amalgam_surfaces")
-        beta_m, _, _, _ = extract_param(res, "log_mercury")
+        beta_a, lo_a, hi_a, _ = extract_param(res, "amalgam_surfaces")
+        beta_m, lo_m, hi_m, _ = extract_param(res, "log_mercury")
         rows.append(
             {
                 "Sex": sex,
                 "Race": race,
                 "Beta_amalgam": beta_a,
+                "CI_low_amalgam": lo_a,
+                "CI_high_amalgam": hi_a,
                 "Beta_mercury": beta_m,
+                "CI_low_mercury": lo_m,
+                "CI_high_mercury": hi_m,
                 "N": n,
                 "Weighted_N": w,
             }
@@ -491,17 +495,43 @@ def interaction_analysis(df: pd.DataFrame) -> None:
         if not result:
             continue
         res, n, w = result
-        base_mercury, _, _, _ = extract_param(res, "log_mercury")
-        interaction_beta, _, _, p_int = extract_param(res, name)
+        base_mercury, base_lo, base_hi, _ = extract_param(res, "log_mercury")
+        interaction_beta, int_lo, int_hi, p_int = extract_param(res, name)
+        cov = res.cov_params()
+        exposed_beta = np.nan
+        exposed_lo = np.nan
+        exposed_hi = np.nan
+        if np.isfinite(base_mercury) and np.isfinite(interaction_beta):
+            exposed_beta = base_mercury + interaction_beta
+            if (
+                isinstance(cov, pd.DataFrame)
+                and "log_mercury" in cov.index
+                and name in cov.index
+                and "log_mercury" in cov.columns
+                and name in cov.columns
+            ):
+                var = (
+                    cov.loc["log_mercury", "log_mercury"]
+                    + cov.loc[name, name]
+                    + 2 * cov.loc["log_mercury", name]
+                )
+                if var >= 0:
+                    se = np.sqrt(var)
+                    exposed_lo = exposed_beta - 1.96 * se
+                    exposed_hi = exposed_beta + 1.96 * se
         rows.append(
             {
                 "Interaction": name,
                 "Base_mercury_beta": base_mercury,
+                "Base_ci_low": base_lo,
+                "Base_ci_high": base_hi,
                 "Interaction_beta": interaction_beta,
+                "Interaction_ci_low": int_lo,
+                "Interaction_ci_high": int_hi,
                 "Interaction_p": p_int,
-                "Beta_in_exposed_group": base_mercury + interaction_beta
-                if np.isfinite(base_mercury) and np.isfinite(interaction_beta)
-                else np.nan,
+                "Beta_in_exposed_group": exposed_beta,
+                "Exposed_ci_low": exposed_lo,
+                "Exposed_ci_high": exposed_hi,
                 "N": n,
                 "Weighted_N": w,
             }
@@ -548,8 +578,10 @@ def legacy_marker_exports(df: pd.DataFrame) -> None:
             if not result:
                 continue
             res, _, _ = result
-            beta, _, _, _ = extract_param(res, "amalgam_surfaces")
-            strat_rows.append({"Marker": marker, "Sex": sex, "Race": race, "Beta": beta})
+            beta, lo, hi, _ = extract_param(res, "amalgam_surfaces")
+            strat_rows.append(
+                {"Marker": marker, "Sex": sex, "Race": race, "Beta": beta, "CI_Low": lo, "CI_High": hi}
+            )
         pd.DataFrame(strat_rows).to_csv(
             os.path.join(OUTPUT_DIR, f"stratified_results_{marker}.csv"), index=False
         )
