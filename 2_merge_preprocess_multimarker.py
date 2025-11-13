@@ -121,12 +121,20 @@ def detect_mercury_col(df):
     candidates=[c for c in df.columns if "THG" in c.upper()]
     return candidates[0] if candidates else None
 
+def select_alcohol_flag(alq_df):
+    """Return a yes/no alcohol flag column available for the current cycle."""
+    preferred = ["ALQ101","ALQ100","ALQ111","ALQ110"]
+    for col in preferred:
+        if col in alq_df.columns:
+            return col
+    return None
+
 frames = []
 
 for cycle, files in CYCLES.items():
     missing = required_files_missing(cycle, files)
     if missing:
-        print(f"⚠️  Skipping {cycle}: missing files {', '.join(missing)}")
+        print(f"[WARN] Skipping {cycle}: missing files {', '.join(missing)}")
         continue
     try:
         demo = load_xpt(os.path.join(DATA_DIR, files["DEMO"]), "DEMO")
@@ -140,20 +148,27 @@ for cycle, files in CYCLES.items():
         try:
             hgm  = load_xpt(os.path.join(DATA_DIR, files["HGM"]), "HGM")
         except Exception as err:
-            print(f"⚠️  {cycle}: unable to read mercury file ({err}); continuing without it.")
+            print(f"[WARN] {cycle}: unable to read mercury file ({err}); continuing without it.")
             hgm = pd.DataFrame()
 
         ohx2 = count_amalgam(ohx)
         crp_col = detect_crp_col(crp)
         if not crp_col:
-            print(f"⚠️  Skipping {cycle}: CRP column not found in {files['CRP']}")
+            print(f"[WARN] Skipping {cycle}: CRP column not found in {files['CRP']}")
             continue
         df = demo.merge(ohx2, on="SEQN").merge(crp[["SEQN",crp_col]], on="SEQN", how="left")
         df["CRP"] = df[crp_col]
         df = df.merge(cbc, on="SEQN", how="left")
         df = compute_inflammation(df)
         df = df.merge(smq[["SEQN","SMQ020","SMQ040"]], on="SEQN", how="left")
-        df = df.merge(alq[["SEQN","ALQ101"]], on="SEQN", how="left")
+        drink_flag_col = "ALQ_DRINK_FLAG"
+        alq_flag = select_alcohol_flag(alq)
+        if alq_flag:
+            df = df.merge(alq[["SEQN",alq_flag]], on="SEQN", how="left")
+            df.rename(columns={alq_flag: drink_flag_col}, inplace=True)
+        else:
+            df[drink_flag_col] = np.nan
+            print(f"[WARN] {cycle}: no ALQ yes/no drinking variable found; Drinker will be NaN.")
         df = df.merge(bmx[["SEQN","BMXBMI"]], on="SEQN", how="left")  # BMI
         if "DIQ010" in diq.columns:
             df = df.merge(diq[["SEQN","DIQ010"]], on="SEQN", how="left")  # Doctor told diabetes
@@ -172,17 +187,24 @@ for cycle, files in CYCLES.items():
         df["PIR"] = df.get("INDFMPIR", np.nan)
         df["Smoker"] = df["SMQ020"].replace({1:"Ever",2:"Never"})
         df["CurrentSmoker"] = df["SMQ040"].replace({1:"Everyday",2:"Somedays",3:"Not at all"})
-        df["Drinker"] = np.where(df["ALQ101"]==1,"Yes","No")
+        if drink_flag_col in df.columns:
+            df["Drinker"] = np.where(
+                df[drink_flag_col] == 1,
+                "Yes",
+                np.where(df[drink_flag_col] == 2, "No", None),
+            )
+        else:
+            df["Drinker"] = np.nan
         df["amalgam_group"] = pd.cut(df["amalgam_surfaces"], [-1,0,5,10,np.inf],
-                                     labels=["None","Low (1–5)","Medium (6–10)","High (>10)"])
+                                     labels=["None","Low (1-5)","Medium (6-10)","High (>10)"])
         df["Cycle"] = cycle
         frames.append(df)
-        print(f"✅ Merged {cycle}, n={len(df)}")
+        print(f"[OK] Merged {cycle}, n={len(df)}")
     except Exception as e:
-        print(f"❌ Skipped {cycle}: {e}")
+        print(f"[ERROR] Skipped {cycle}: {e}")
 
 if not frames:
-    print("⚠️  No NHANES cycles were processed. Ensure nhanes_data/ contains the downloaded .xpt files from CDC.")
+    print("[WARN] No NHANES cycles were processed. Ensure nhanes_data/ contains the downloaded .xpt files from CDC.")
     empty_cols = ["SEQN","Cycle","amalgam_surfaces","CRP","NLR","MLR","PLR","SII",
                   "Gender","Race","Age","PIR","WTMEC2YR"]
     pd.DataFrame(columns=empty_cols).to_csv("output_data/nhanes_merged_multimarker.csv", index=False)
@@ -197,4 +219,4 @@ full["amalgam_high_burden"] = (full["amalgam_surfaces"] >= 6).astype(float)
 full["CycleMidpoint"] = full["Cycle"].apply(compute_cycle_midpoint)
 full = assign_mercury_quartiles(full)
 full.to_csv("output_data/nhanes_merged_multimarker.csv", index=False)
-print("✅ Saved output_data/nhanes_merged_multimarker.csv")
+print("[OK] Saved output_data/nhanes_merged_multimarker.csv")

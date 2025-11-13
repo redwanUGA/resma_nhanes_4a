@@ -20,7 +20,7 @@ DATA_DIR = "output_data"
 MERGED_PATH = os.path.join(DATA_DIR, "nhanes_merged_multimarker.csv")
 WEIGHT_COL = "WTMEC2YR"
 MARKERS = ["CRP", "NLR", "MLR", "PLR", "SII"]
-AMALGAM_ORDER = ["None", "Low (1–5)", "Medium (6–10)", "High (>10)"]
+AMALGAM_ORDER = ["None", "Low (1-5)", "Medium (6-10)", "High (>10)"]
 MERCURY_ORDER = ["Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"]
 
 
@@ -68,7 +68,7 @@ def ensure_category_order(df, col, order):
 def plot_mercury_distribution(df):
     subset = df.dropna(subset=["amalgam_group", "LBXTHG", WEIGHT_COL])
     if subset.empty:
-        print("⚠️  Skipping Figure 1 (no amalgam/mercury data).")
+        print("[WARN]  Skipping Figure 1 (no amalgam/mercury data).")
         return
     subset = ensure_category_order(subset, "amalgam_group", AMALGAM_ORDER)
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -110,7 +110,7 @@ def plot_mercury_regression(df):
     subset = df.dropna(subset=["amalgam_surfaces", "LBXTHG", WEIGHT_COL])
     subset = subset[subset["LBXTHG"] > 0]
     if subset.empty:
-        print("⚠️  Skipping Figure 2 (insufficient mercury values).")
+        print("[WARN]  Skipping Figure 2 (insufficient mercury values).")
         return
     subset["log_mercury"] = np.log(subset["LBXTHG"])
     sample_n = 8000
@@ -158,7 +158,7 @@ def plot_marker_distributions(df):
     subset = df.dropna(subset=["mercury_quartile"])
     subset = ensure_category_order(subset, "mercury_quartile", MERCURY_ORDER)
     if subset.empty:
-        print("⚠️  Skipping Figure 3 (no mercury quartiles).")
+        print("[WARN]  Skipping Figure 3 (no mercury quartiles).")
         return
     geopath = os.path.join(DATA_DIR, "marker_weighted_geomeans.csv")
     geodf = pd.read_csv(geopath) if os.path.exists(geopath) else pd.DataFrame()
@@ -202,11 +202,11 @@ def plot_marker_distributions(df):
 def plot_heatmaps():
     path = os.path.join(DATA_DIR, "stratified_crp_heatmap.csv")
     if not os.path.exists(path):
-        print("⚠️  Skipping Figure 4 (stratified heatmap data missing).")
+        print("[WARN]  Skipping Figure 4 (stratified heatmap data missing).")
         return
     heat = pd.read_csv(path)
     if heat.empty:
-        print("⚠️  Skipping Figure 4 (empty stratified results).")
+        print("[WARN]  Skipping Figure 4 (empty stratified results).")
         return
     piv_amalgam = heat.pivot(index="Sex", columns="Race", values="Beta_amalgam")
     piv_mercury = heat.pivot(index="Sex", columns="Race", values="Beta_mercury")
@@ -238,11 +238,11 @@ def plot_heatmaps():
 def plot_temporal_trend():
     path = os.path.join(DATA_DIR, "regression_cycle_crp.csv")
     if not os.path.exists(path):
-        print("⚠️  Skipping Figure 5 (cycle-level results missing).")
+        print("[WARN]  Skipping Figure 5 (cycle-level results missing).")
         return
     trend = pd.read_csv(path)
     if trend.empty:
-        print("⚠️  Skipping Figure 5 (empty cycle results).")
+        print("[WARN]  Skipping Figure 5 (empty cycle results).")
         return
     if "CycleMidpoint" not in trend.columns or trend["CycleMidpoint"].isna().all():
         trend["CycleMidpoint"] = trend["Cycle"].str.slice(0, 4).astype(float) + 0.5
@@ -307,11 +307,11 @@ def plot_mediation_diagram():
     table_path = os.path.join(DATA_DIR, "table2_regression_amalgam_mercury_adjusted.csv")
     mercury_reg_path = os.path.join(DATA_DIR, "mercury_on_amalgam_regression.csv")
     if not os.path.exists(med_path):
-        print("⚠️  Skipping Figure 6 (mediation results missing).")
+        print("[WARN]  Skipping Figure 6 (mediation results missing).")
         return
     med = pd.read_csv(med_path)
     if med.empty:
-        print("⚠️  Skipping Figure 6 (empty mediation results).")
+        print("[WARN]  Skipping Figure 6 (empty mediation results).")
         return
     prop = med["Proportion_mediated"].iloc[0] if "Proportion_mediated" in med else np.nan
     beta_amalgam = beta_mercury = beta_direct = np.nan
@@ -398,7 +398,14 @@ def plot_mediation_diagram():
 def plot_behavior_figures(df):
     df = df.copy()
     df["current_smoker_flag"] = df["SMQ040"].isin([1, 2]).astype(int)
-    df["alcohol_flag"] = (df["ALQ101"] == 1).astype(int)
+    drink_col = "ALQ_DRINK_FLAG" if "ALQ_DRINK_FLAG" in df.columns else (
+        "ALQ101" if "ALQ101" in df.columns else None
+    )
+    if drink_col:
+        df["alcohol_flag"] = (df[drink_col] == 1).astype(int)
+    else:
+        df["alcohol_flag"] = 0
+        print("[WARN]  ALQ drinking variable missing; alcohol behavior panel will be blank.")
     df = ensure_category_order(df, "amalgam_group", AMALGAM_ORDER)
     smoke = weighted_percent(df.dropna(subset=["amalgam_group"]), "amalgam_group", "current_smoker_flag")
     drink = weighted_percent(df.dropna(subset=["amalgam_group"]), "amalgam_group", "alcohol_flag")
@@ -474,11 +481,11 @@ def plot_behavior_figures(df):
 def main():
     os.makedirs(OUTPUT_FIG_DIR, exist_ok=True)
     if not os.path.exists(MERGED_PATH):
-        print("⚠️  nhanes_merged_multimarker.csv not found; run preprocessing first.")
+        print("[WARN]  nhanes_merged_multimarker.csv not found; run preprocessing first.")
         sys.exit(0)
     merged = pd.read_csv(MERGED_PATH)
     if merged.empty:
-        print("⚠️  nhanes_merged_multimarker.csv is empty; skipping figures.")
+        print("[WARN]  nhanes_merged_multimarker.csv is empty; skipping figures.")
         sys.exit(0)
     plot_mercury_distribution(merged)
     plot_mercury_regression(merged)
@@ -487,7 +494,7 @@ def main():
     plot_temporal_trend()
     plot_mediation_diagram()
     plot_behavior_figures(merged)
-    print("✅ Saved updated figures to output_figures/")
+    print("[OK] Saved updated figures to output_figures/")
 
 
 if __name__ == "__main__":

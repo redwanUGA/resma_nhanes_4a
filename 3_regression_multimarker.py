@@ -374,7 +374,7 @@ def cycle_specific_crp(df: pd.DataFrame) -> None:
             }
         )
     if not rows:
-        print("⚠️  Skipping cycle-specific CRP (insufficient cycle data).")
+        print("[WARN]  Skipping cycle-specific CRP (insufficient cycle data).")
         cols = [
             "Cycle",
             "CycleMidpoint",
@@ -516,7 +516,7 @@ def interaction_analysis(df: pd.DataFrame) -> None:
         "Weighted_N",
     ]
     if not rows:
-        print("⚠️  Skipping interaction analysis (insufficient data).")
+        print("[WARN]  Skipping interaction analysis (insufficient data).")
         pd.DataFrame(columns=columns).to_csv(
             os.path.join(OUTPUT_DIR, "behavior_interaction_results.csv"), index=False
         )
@@ -560,13 +560,13 @@ def main() -> None:
     merged_path = os.path.join(OUTPUT_DIR, "nhanes_merged_multimarker.csv")
     if not os.path.exists(merged_path):
         print(
-            "⚠️  output_data/nhanes_merged_multimarker.csv not found. Run step 2 first.",
+            "[WARN]  output_data/nhanes_merged_multimarker.csv not found. Run step 2 first.",
             file=sys.stderr,
         )
         return
     df = pd.read_csv(merged_path)
     if df.empty:
-        print("⚠️  nhanes_merged_multimarker.csv is empty; skipping regressions.")
+        print("[WARN]  nhanes_merged_multimarker.csv is empty; skipping regressions.")
         return
     df = ensure_required_columns(df)
     df = df.dropna(subset=[WEIGHT_COL, "amalgam_surfaces", "Age"], how="any")
@@ -581,7 +581,7 @@ def main() -> None:
     mediation_analysis(df)
     interaction_analysis(df)
     legacy_marker_exports(df)
-    print("✅ Saved regression tables, mediation outputs, and interaction summaries.")
+    print("[OK] Saved regression tables, mediation outputs, and interaction summaries.")
 
 
 if __name__ == "__main__":

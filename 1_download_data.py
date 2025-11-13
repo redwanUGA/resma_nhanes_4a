@@ -51,21 +51,21 @@ FILES = {
 }
 
 for cycle, base in BASE.items():
-    print(f"\\n📦 Processing {cycle}")
+    print(f"\n[INFO] Processing {cycle}")
     for label, fname in FILES[cycle].items():
         url = base + fname
         path = os.path.join("nhanes_data", fname)
         if os.path.exists(path) and os.path.getsize(path) > 0:
-            print(f"⏭️  {fname} exists, skipping.")
+            print(f"[SKIP]  {fname} exists, skipping.")
             continue
         try:
             r = requests.get(url, timeout=60)
             if r.status_code == 200 and r.content:
                 with open(path, "wb") as f:
                     f.write(r.content)
-                print(f"✅ {label}: {fname}")
+                print(f"[OK] {label}: {fname}")
             else:
-                print(f"⚠️ Missing or unavailable: {fname} ({r.status_code})")
+                print(f"[WARN] Missing or unavailable: {fname} ({r.status_code})")
         except Exception as e:
-            print(f"❌ Error downloading {fname}: {e}")
+            print(f"[ERROR] Error downloading {fname}: {e}")
 print("Done.")
