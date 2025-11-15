@@ -67,7 +67,8 @@ def safe_log_series(series):
 
 def ensure_category_order(df, col, order):
     if col in df.columns:
-        df[col] = pd.Categorical(df[col], categories=order, ordered=True)
+        df = df.copy()
+        df.loc[:, col] = pd.Categorical(df[col], categories=order, ordered=True)
     return df
 
 
@@ -242,7 +243,7 @@ def plot_marker_ridgelines(df):
         )
         legend = plot.get_legend()
         if legend and legend_handles is None:
-            legend_handles = legend.legendHandles
+            legend_handles = legend.legend_handles
         if legend:
             legend.remove()
         medians = []
@@ -783,7 +784,7 @@ def main():
     if not os.path.exists(MERGED_PATH):
         print("[WARN]  nhanes_merged_multimarker.csv not found; run preprocessing first.")
         sys.exit(0)
-    merged = pd.read_csv(MERGED_PATH)
+    merged = pd.read_csv(MERGED_PATH, low_memory=False)
     if merged.empty:
         print("[WARN]  nhanes_merged_multimarker.csv is empty; skipping figures.")
         sys.exit(0)

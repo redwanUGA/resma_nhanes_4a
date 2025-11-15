@@ -19,13 +19,7 @@ Or run the full workflow:
 chmod +x run_workflow.sh
 ./run_workflow.sh
 ```
-
-### Windows (Git Bash)
-```bash
-chmod +x run_workflow_windows.sh
-./run_workflow_windows.sh
-```
-This script auto-detects `python3`/`python`/`py -3` on Windows and logs to `run_log_YYYYMMDD_HHMMSS.txt`.
+This script auto-detects `python3`/`python`/`py -3`, provisions `.venv/`, installs `requirements.txt`, and logs to `run_log_YYYYMMDD_HHMMSS.txt` across Linux, macOS, and Windows (Git Bash).
 
 ### Outputs
 - `output_data/nhanes_merged_multimarker.csv` – unified analytic dataset

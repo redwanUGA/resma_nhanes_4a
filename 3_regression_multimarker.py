@@ -611,7 +611,7 @@ def main() -> None:
             file=sys.stderr,
         )
         return
-    df = pd.read_csv(merged_path)
+    df = pd.read_csv(merged_path, low_memory=False)
     if df.empty:
         print("[WARN]  nhanes_merged_multimarker.csv is empty; skipping regressions.")
         return
